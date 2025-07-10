@@ -217,23 +217,23 @@ if(CXX_FILESYSTEM_HAVE_FS)
         set(CMAKE_REQUIRED_FLAGS ${prev_req_flags} -std=c++17)
     endif ()
     # Check a simple filesystem program without any linker flags
-    _cmcm_check_cxx_source("${code}" CXX_FILESYSTEM_NO_LINK_NEEDED)
+    # _cmcm_check_cxx_source("${code}" CXX_FILESYSTEM_NO_LINK_NEEDED)
 
-    set(can_link ${CXX_FILESYSTEM_NO_LINK_NEEDED})
+    # set(can_link ${CXX_FILESYSTEM_NO_LINK_NEEDED})
 
-    if(NOT CXX_FILESYSTEM_NO_LINK_NEEDED)
-        set(prev_libraries ${CMAKE_REQUIRED_LIBRARIES})
-        # Add the libstdc++ flag
-        set(CMAKE_REQUIRED_LIBRARIES ${prev_libraries} -lstdc++fs)
-        _cmcm_check_cxx_source("${code}" CXX_FILESYSTEM_STDCPPFS_NEEDED)
-        set(can_link ${CXX_FILESYSTEM_STDCPPFS_NEEDED})
-        if(NOT CXX_FILESYSTEM_STDCPPFS_NEEDED)
-            # Try the libc++ flag
-            set(CMAKE_REQUIRED_LIBRARIES ${prev_libraries} -lc++fs)
-            _cmcm_check_cxx_source("${code}" CXX_FILESYSTEM_CPPFS_NEEDED)
-            set(can_link ${CXX_FILESYSTEM_CPPFS_NEEDED})
-        endif()
-    endif()
+    # if(NOT CXX_FILESYSTEM_NO_LINK_NEEDED)
+    #     set(prev_libraries ${CMAKE_REQUIRED_LIBRARIES})
+    #     # Add the libstdc++ flag
+    #     set(CMAKE_REQUIRED_LIBRARIES ${prev_libraries} -lstdc++fs)
+    #     _cmcm_check_cxx_source("${code}" CXX_FILESYSTEM_STDCPPFS_NEEDED)
+    #     set(can_link ${CXX_FILESYSTEM_STDCPPFS_NEEDED})
+    #     if(NOT CXX_FILESYSTEM_STDCPPFS_NEEDED)
+    #         # Try the libc++ flag
+    #         set(CMAKE_REQUIRED_LIBRARIES ${prev_libraries} -lc++fs)
+    #         _cmcm_check_cxx_source("${code}" CXX_FILESYSTEM_CPPFS_NEEDED)
+    #         set(can_link ${CXX_FILESYSTEM_CPPFS_NEEDED})
+    #     endif()
+    # endif()
 
     if(can_link)
         add_library(std::filesystem INTERFACE IMPORTED)

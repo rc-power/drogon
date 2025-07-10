@@ -9,6 +9,7 @@
       "name": "default",
       "cacheVariables": {
         "BUILD_CTL": "OFF",
+        "BUILD_BROTLI": "OFF",
         "BUILD_EXAMPLES": "OFF",
         "COZ_PROFILING": "OFF",
         "BUILD_YAML_CONFIG": "OFF",
