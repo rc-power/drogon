@@ -12,7 +12,7 @@
         "BUILD_EXAMPLES": "OFF",
         "COZ_PROFILING": "OFF",
         "BUILD_YAML_CONFIG": "OFF",
-        "USE_STATIC_LIBS_ONLY": "ON",
+        "USE_STATIC_LIBS_ONLY": "OFF",
         "BUILD_MYSQL": "ON",
         "BUILD_POSTGRESQL": "OFF",
         "BUILD_SQLITE": "OFF",
