@@ -1,0 +1,30 @@
+{
+  "version": 4,
+  "include": [
+    "../CMakePresets.json"
+  ],
+  "configurePresets": [
+    {
+      "inherits": "linux-base",
+      "name": "default",
+      "cacheVariables": {
+        "BUILD_CTL": "OFF",
+        "BUILD_EXAMPLES": "OFF",
+        "COZ_PROFILING": "OFF",
+        "BUILD_YAML_CONFIG": "OFF",
+        "USE_STATIC_LIBS_ONLY": "ON",
+        "BUILD_MYSQL": "ON",
+        "BUILD_POSTGRESQL": "OFF",
+        "BUILD_SQLITE": "OFF",
+        "USE_SPDLOG": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "cleanFirst": true,
+      "configurePreset": "default"
+    }
+  ]
+}
