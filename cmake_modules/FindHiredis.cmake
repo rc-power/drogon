@@ -12,14 +12,16 @@ else ()
     find_path(
             HIREDIS_INCLUDE_DIR
             NAMES hiredis/hiredis.h
+            PATH ${CMAKE_PREFIX_PATH}
             HINTS ${HIREDIS_ROOT_DIR}
-            PATH_SUFFIXES include)
+            PATH_SUFFIXES hiredis hiredis/include)
 
     find_library(
             HIREDIS_LIBRARY
             NAMES hiredis
+            PATH ${CMAKE_PREFIX_PATH}
             HINTS ${HIREDIS_ROOT_DIR}
-            PATH_SUFFIXES ${CMAKE_INSTALL_LIBDIR})
+            PATH_SUFFIXES hiredis hiredis/lib64)
 
     set(HIREDIS_INCLUDE_DIRS ${HIREDIS_INCLUDE_DIR})
     set(HIREDIS_LIBRARIES ${HIREDIS_LIBRARY})

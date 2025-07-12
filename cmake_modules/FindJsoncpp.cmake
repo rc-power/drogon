@@ -13,11 +13,15 @@
 # only look in default directories
 find_path(JSONCPP_INCLUDE_DIRS
           NAMES json/json.h
+          PATH ${CMAKE_PREFIX_PATH}
           DOC "jsoncpp include dir"
           PATH_SUFFIXES jsoncpp)
 
-find_library(JSONCPP_LIBRARIES NAMES jsoncpp DOC "jsoncpp library")
-
+find_library(JSONCPP_LIBRARIES 
+             PATH ${CMAKE_PREFIX_PATH}
+             NAMES jsoncpp 
+             DOC "jsoncpp library"
+             PATH_SUFFIXES jsoncpp jsoncpp/lib64)
 # debug library on windows same naming convention as in qt (appending debug
 # library with d) boost is using the same "hack" as us with "optimized" and
 # "debug" if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
