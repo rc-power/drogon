@@ -17,6 +17,7 @@
         "BUILD_MYSQL": "ON",
         "BUILD_POSTGRESQL": "OFF",
         "BUILD_SQLITE": "OFF",
+        "BUILD_REDIS": "OFF",
         "USE_SPDLOG": "ON"
       }
     }

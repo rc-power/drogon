@@ -23,7 +23,8 @@
 #include <drogon/HttpTypes.h>
 #include <drogon/HttpViewData.h>
 #include <drogon/utils/Utilities.h>
-#include <json/json.h>
+// #include <json/json.h>
+#include <cpp_yyjson.hpp>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -61,14 +62,14 @@ HttpResponsePtr toResponse(T &&)
 }
 
 template <>
-HttpResponsePtr toResponse<const Json::Value &>(const Json::Value &pJson);
+HttpResponsePtr toResponse<const yyjson::reader::value &>(const yyjson::reader::value &pJson);
 template <>
-HttpResponsePtr toResponse(Json::Value &&pJson);
+HttpResponsePtr toResponse(yyjson::reader::value &&pJson);
 
 template <>
-inline HttpResponsePtr toResponse<Json::Value &>(Json::Value &pJson)
+inline HttpResponsePtr toResponse<yyjson::reader::value &>(yyjson::reader::value &pJson)
 {
-    return toResponse((const Json::Value &)pJson);
+    return toResponse((const yyjson::reader::value &)pJson);
 }
 
 class DROGON_EXPORT ResponseStream
@@ -119,10 +120,10 @@ class DROGON_EXPORT HttpResponse
     /**
      * @brief This template enables automatic type conversion. For using this
      * template, user must specialize the fromResponse template. For example a
-     * shared_ptr<Json::Value> specialization version is available above, so
+     * shared_ptr<yyjson::writer::value> specialization version is available above, so
      * we can use the following code to get a json object:
      * @code
-     *  std::shared_ptr<Json::Value> jsonPtr = *responsePtr;
+     *  std::shared_ptr<yyjson::writer::value> jsonPtr = *responsePtr;
      *  @endcode
      * With this template, user can use their favorite JSON library instead of
      * the default jsoncpp library or convert the response to an object of any
@@ -356,9 +357,9 @@ class DROGON_EXPORT HttpResponse
     /// Get the json object from the server response.
     /// If the response is not in json format, then a empty shared_ptr is
     /// returned.
-    virtual const std::shared_ptr<Json::Value> &jsonObject() const = 0;
+    virtual const std::shared_ptr<yyjson::reader::value> &jsonObject() const = 0;
 
-    const std::shared_ptr<Json::Value> &getJsonObject() const
+    const std::shared_ptr<yyjson::reader::value> &getJsonObject() const
     {
         return jsonObject();
     }
@@ -409,10 +410,10 @@ class DROGON_EXPORT HttpResponse
         const HttpRequestPtr &req = HttpRequestPtr());
     /// Create a response which returns a json object. Its content-type is set
     /// to application/json.
-    static HttpResponsePtr newHttpJsonResponse(const Json::Value &data);
+    static HttpResponsePtr newHttpJsonResponse(const yyjson::writer::value &data);
     /// Create a response which returns a json object. Its content-type is set
     /// to application/json.
-    static HttpResponsePtr newHttpJsonResponse(Json::Value &&data);
+    static HttpResponsePtr newHttpJsonResponse(yyjson::writer::value &&data);
     /// Create a response that returns a page rendered by a view named
     /// viewName.
     /**
@@ -606,19 +607,19 @@ class DROGON_EXPORT HttpResponse
 };
 
 template <>
-inline HttpResponsePtr toResponse<const Json::Value &>(const Json::Value &pJson)
+inline HttpResponsePtr toResponse<const yyjson::writer::value &>(const yyjson::writer::value &pJson)
 {
     return HttpResponse::newHttpJsonResponse(pJson);
 }
 
 template <>
-inline HttpResponsePtr toResponse(Json::Value &&pJson)
+inline HttpResponsePtr toResponse(yyjson::writer::value &&pJson)
 {
     return HttpResponse::newHttpJsonResponse(std::move(pJson));
 }
 
 template <>
-inline std::shared_ptr<Json::Value> fromResponse(const HttpResponse &resp)
+inline std::shared_ptr<yyjson::reader::value> fromResponse(const HttpResponse &resp)
 {
     return resp.getJsonObject();
 }

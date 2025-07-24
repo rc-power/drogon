@@ -22,10 +22,11 @@
 #include <drogon/orm/Row.h>
 #include <drogon/orm/RowIterator.h>
 #include <string_view>
-#include <json/writer.h>
+// #include <json/writer.h>
 #include <trantor/utils/Logger.h>
 #include <trantor/utils/NonCopyable.h>
-#include <json/json.h>
+// #include <cpp_yyjson.hpp>
+#include <cpp_yyjson.hpp>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -558,41 +559,41 @@ class DROGON_EXPORT SqlBinder : public trantor::NonCopyable
         return *this << nullptr;
     }
 
-    self &operator<<(const Json::Value &j) noexcept(true)
+    self &operator<<(const yyjson::writer::value &j) noexcept(true)
     {
-        switch (j.type())
+        switch (j.get_type())
         {
-            case Json::nullValue:
+            case YYJSON_TYPE_NULL:
                 return *this << nullptr;
-            case Json::intValue:
-                return *this << j.asInt64();
-            case Json::uintValue:
-                return *this << j.asUInt64();
-            case Json::realValue:
-                return *this << j.asDouble();
-            case Json::stringValue:
-                return *this << j.asString();
-            case Json::booleanValue:
-                return *this << j.asBool();
-            case Json::arrayValue:
-            case Json::objectValue:
+            case YYJSON_TYPE_NUM | YYJSON_SUBTYPE_SINT:
+                return *this << *j.as_sint();
+            case YYJSON_TYPE_NUM | YYJSON_SUBTYPE_UINT:
+                return *this << *j.as_uint();
+            case YYJSON_TYPE_NUM | YYJSON_SUBTYPE_REAL:
+                return *this << *j.as_real();
+            case YYJSON_TYPE_STR:
+                return *this << *j.as_string();
+            case YYJSON_TYPE_BOOL:
+                return *this << *j.as_bool();
+            case YYJSON_TYPE_ARR:
+            case YYJSON_TYPE_OBJ:
             default:
-                static Json::StreamWriterBuilder jsonBuilder;
-                std::once_flag once_json;
-                std::call_once(once_json,
-                               []() { jsonBuilder["indentation"] = ""; });
-                return *this << Json::writeString(jsonBuilder, j);
+                // static Json::StreamWriterBuilder jsonBuilder;
+                // std::once_flag once_json;
+                // std::call_once(once_json,
+                //                []() { jsonBuilder["indentation"] = ""; });
+                return *this << j.write().data();
         }
     }
 
-    self &operator<<(Json::Value &j) noexcept(true)
+    self &operator<<(yyjson::writer::value &j) noexcept(true)
     {
-        return *this << static_cast<const Json::Value &>(j);
+        return *this << static_cast<const yyjson::writer::value &>(j);
     }
 
-    self &operator<<(Json::Value &&j) noexcept(true)
+    self &operator<<(yyjson::writer::value &&j) noexcept(true)
     {
-        return *this << static_cast<const Json::Value &>(j);
+        return *this << static_cast<const yyjson::writer::value &>(j);
     }
 
     void exec() noexcept(false);

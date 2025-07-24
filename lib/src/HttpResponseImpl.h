@@ -23,9 +23,7 @@
 #include <trantor/utils/Date.h>
 #include <trantor/utils/MsgBuffer.h>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <atomic>
 #include <unordered_map>
 
 namespace drogon
@@ -258,7 +256,7 @@ class DROGON_EXPORT HttpResponseImpl : public HttpResponse
 
     const char *getBodyData() const override
     {
-        if (!flagForSerializingJson_ && jsonPtr_)
+        if (!flagForSerializingJson_ && jsonWriterPtr_)
         {
             generateBodyFromJson();
         }
@@ -279,7 +277,7 @@ class DROGON_EXPORT HttpResponseImpl : public HttpResponse
     void swap(HttpResponseImpl &that) noexcept;
     void parseJson() const;
 
-    const std::shared_ptr<Json::Value> &jsonObject() const override
+    const std::shared_ptr<yyjson::reader::value> &jsonObject() const override
     {
         // Not multi-thread safe but good, because we basically call this
         // function in a single thread
@@ -288,7 +286,7 @@ class DROGON_EXPORT HttpResponseImpl : public HttpResponse
             flagForParsingJson_ = true;
             parseJson();
         }
-        return jsonPtr_;
+        return jsonReaderPtr_;
     }
 
     const std::string &getJsonError() const override
@@ -299,18 +297,18 @@ class DROGON_EXPORT HttpResponseImpl : public HttpResponse
         return none;
     }
 
-    void setJsonObject(const Json::Value &pJson)
+    void setJsonObject(const yyjson::writer::value &pJson)
     {
         flagForParsingJson_ = true;
         flagForSerializingJson_ = false;
-        jsonPtr_ = std::make_shared<Json::Value>(pJson);
+        jsonWriterPtr_ = std::make_shared<yyjson::writer::value>(pJson);
     }
 
-    void setJsonObject(Json::Value &&pJson)
+    void setJsonObject(yyjson::writer::value &&pJson)
     {
         flagForParsingJson_ = true;
         flagForSerializingJson_ = false;
-        jsonPtr_ = std::make_shared<Json::Value>(std::move(pJson));
+        jsonWriterPtr_ = std::make_shared<yyjson::writer::value>(std::move(pJson));
     }
 
     bool shouldBeCompressed() const;
@@ -522,7 +520,8 @@ class DROGON_EXPORT HttpResponseImpl : public HttpResponse
     std::function<void(ResponseStreamPtr)> asyncStreamCallback_;
     bool asyncStreamDisableKickoff_{false};
 
-    mutable std::shared_ptr<Json::Value> jsonPtr_;
+    mutable std::shared_ptr<yyjson::reader::value> jsonReaderPtr_;
+    mutable std::shared_ptr<yyjson::writer::value> jsonWriterPtr_;
 
     std::shared_ptr<trantor::MsgBuffer> fullHeaderString_;
     trantor::CertificatePtr peerCertificate_;

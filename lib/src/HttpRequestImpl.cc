@@ -17,8 +17,11 @@
 #include "HttpAppFrameworkImpl.h"
 
 #include <drogon/utils/Utilities.h>
+#include <cpp_yyjson.hpp>
+#include <exception>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -39,34 +42,54 @@ void HttpRequestImpl::parseJson() const
         getHeaderBy("content-type").find("application/json") !=
             std::string::npos)
     {
-        static std::once_flag once;
-        static Json::CharReaderBuilder builder;
-        std::call_once(once, []() {
-            builder["collectComments"] = false;
-            builder["stackLimit"] = static_cast<Json::UInt>(
-                drogon::app().getJsonParserStackLimit());
-        });
-        jsonPtr_ = std::make_shared<Json::Value>();
-        JSONCPP_STRING errs;
-        std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
-        if (!reader->parse(input.data(),
-                           input.data() + input.size(),
-                           jsonPtr_.get(),
-                           &errs))
+        // static std::once_flag once;
+        // static Json::CharReaderBuilder builder;
+        // std::call_once(once, []() {
+        //     builder["collectComments"] = false;
+        //     builder["stackLimit"] = static_cast<Json::UInt>(
+        //         drogon::app().getJsonParserStackLimit());
+        // });
+        // jsonPtr_ = std::make_shared<Json::Value>();
+        // JSONCPP_STRING errs;
+        // std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+        // if (!reader->parse(input.data(),
+        //                    input.data() + input.size(),
+        //                    jsonPtr_.get(),
+        //                    &errs))
+        // {
+        //     LOG_DEBUG << errs;
+        //     jsonPtr_.reset();
+        //     jsonParsingErrorPtr_ =
+        //         std::make_unique<std::string>(std::move(errs));
+        // }
+        // else
+        // {
+        //     jsonParsingErrorPtr_.reset();
+        // }
+
+        static thread_local yyjson::pool_allocator json_pool_alloc(10 * 1024);
+        try 
         {
-            LOG_DEBUG << errs;
-            jsonPtr_.reset();
-            jsonParsingErrorPtr_ =
-                std::make_unique<std::string>(std::move(errs));
-        }
-        else
+            if (json_pool_alloc.check_capacity(input.data()))
+            {
+                jsonReaderPtr_ = std::make_shared<yyjson::reader::value>(yyjson::read(input.data(), json_pool_alloc));
+            }
+            else
+            {
+                jsonReaderPtr_ = std::make_shared<yyjson::reader::value>(yyjson::read(input.data()));
+            }
+        } 
+        catch (std::exception& e) 
         {
-            jsonParsingErrorPtr_.reset();
+            LOG_DEBUG << e.what();
+            jsonReaderPtr_.reset();
+            jsonParsingErrorPtr_ = std::make_unique<std::string>(std::move(e.what()));
         }
+
     }
     else
     {
-        jsonPtr_.reset();
+        jsonReaderPtr_.reset();
         jsonParsingErrorPtr_ =
             std::make_unique<std::string>("content type error");
     }
@@ -528,29 +551,31 @@ HttpRequestPtr HttpRequest::newHttpFormPostRequest()
     return req;
 }
 
-HttpRequestPtr HttpRequest::newHttpJsonRequest(const Json::Value &data)
+HttpRequestPtr HttpRequest::newHttpJsonRequest(const yyjson::writer::value &data)
 {
-    static std::once_flag once;
-    static Json::StreamWriterBuilder builder;
-    std::call_once(once, []() {
-        builder["commentStyle"] = "None";
-        builder["indentation"] = "";
-        if (!app().isUnicodeEscapingUsedInJson())
-        {
-            builder["emitUTF8"] = true;
-        }
-        auto &precision = app().getFloatPrecisionInJson();
-        if (precision.first != 0)
-        {
-            builder["precision"] = precision.first;
-            builder["precisionType"] = precision.second;
-        }
-    });
+    // static std::once_flag once;
+    // static Json::StreamWriterBuilder builder;
+    // std::call_once(once, []() {
+    //     builder["commentStyle"] = "None";
+    //     builder["indentation"] = "";
+    //     if (!app().isUnicodeEscapingUsedInJson())
+    //     {
+    //         builder["emitUTF8"] = true;
+    //     }
+    //     auto &precision = app().getFloatPrecisionInJson();
+    //     if (precision.first != 0)
+    //     {
+    //         builder["precision"] = precision.first;
+    //         builder["precisionType"] = precision.second;
+    //     }
+    // });
+
     auto req = std::make_shared<HttpRequestImpl>(nullptr);
     req->setMethod(drogon::Get);
     req->setVersion(drogon::Version::kHttp11);
     req->contentType_ = CT_APPLICATION_JSON;
-    req->setContent(writeString(builder, data));
+    // req->setContent(writeString(builder, data));
+    req->setContent(data.write().data());
     req->flagForParsingContentType_ = true;
     return req;
 }
@@ -578,7 +603,8 @@ void HttpRequestImpl::swap(HttpRequestImpl &that) noexcept
     swap(contentLengthHeaderValue_, that.contentLengthHeaderValue_);
     swap(realContentLength_, that.realContentLength_);
     swap(parameters_, that.parameters_);
-    swap(jsonPtr_, that.jsonPtr_);
+    swap(jsonReaderPtr_, that.jsonReaderPtr_);
+    swap(jsonWriterPtr_, that.jsonWriterPtr_);
     swap(sessionPtr_, that.sessionPtr_);
     swap(attributesPtr_, that.attributesPtr_);
     swap(cacheFilePtr_, that.cacheFilePtr_);

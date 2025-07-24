@@ -192,6 +192,10 @@ find_package(Jsoncpp REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC Jsoncpp_lib)
 list(APPEND INCLUDE_DIRS_FOR_DYNAMIC_VIEW ${JSONCPP_INCLUDE_DIRS})
 
+list(APPEND CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}/cpp-yyjson")
+find_package(cpp_yyjson REQUIRED)
+target_link_libraries(${PROJECT_NAME} PUBLIC cpp_yyjson::cpp_yyjson)
+
 # yamlcpp
 if(BUILD_YAML_CONFIG)
     find_package(yaml-cpp QUIET)

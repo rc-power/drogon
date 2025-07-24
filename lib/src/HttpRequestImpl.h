@@ -82,7 +82,8 @@ class HttpRequestImpl : public HttpRequest
         matchedPathPattern_ = "";
         query_.clear();
         parameters_.clear();
-        jsonPtr_.reset();
+        jsonReaderPtr_.reset();
+        jsonWriterPtr_.reset();
         sessionPtr_.reset();
         attributesPtr_.reset();
         cacheFilePtr_.reset();
@@ -484,7 +485,7 @@ class HttpRequestImpl : public HttpRequest
         return attributesPtr_;
     }
 
-    const std::shared_ptr<Json::Value> &jsonObject() const override
+    const std::shared_ptr<yyjson::reader::value> &jsonObject() const override
     {
         // Not multi-thread safe but good, because we basically call this
         // function in a single thread
@@ -493,7 +494,7 @@ class HttpRequestImpl : public HttpRequest
             flagForParsingJson_ = true;
             parseJson();
         }
-        return jsonPtr_;
+        return jsonReaderPtr_;
     }
 
     void setCustomContentTypeString(const std::string &type) override
@@ -710,7 +711,8 @@ class HttpRequestImpl : public HttpRequest
     std::optional<size_t> contentLengthHeaderValue_;
     size_t realContentLength_{0};
     mutable SafeStringMap<std::string> parameters_;
-    mutable std::shared_ptr<Json::Value> jsonPtr_;
+    mutable std::shared_ptr<yyjson::writer::value> jsonWriterPtr_;
+    mutable std::shared_ptr<yyjson::reader::value> jsonReaderPtr_;
     SessionPtr sessionPtr_;
     mutable AttributesPtr attributesPtr_;
     trantor::InetAddress peer_;

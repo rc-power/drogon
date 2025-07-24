@@ -18,7 +18,7 @@
 #include "HttpUtils.h"
 #include <drogon/HttpViewData.h>
 #include <drogon/IOThreadStorage.h>
-#include <filesystem>
+#include <cpp_yyjson.hpp>
 #include <fstream>
 #include <memory>
 #include <cstdio>
@@ -69,7 +69,7 @@ HttpResponsePtr HttpResponse::newHttpResponse(HttpStatusCode code,
     return res;
 }
 
-HttpResponsePtr HttpResponse::newHttpJsonResponse(const Json::Value &data)
+HttpResponsePtr HttpResponse::newHttpJsonResponse(const yyjson::writer::value &data)
 {
     auto res = std::make_shared<HttpResponseImpl>(k200OK, CT_APPLICATION_JSON);
     res->setJsonObject(data);
@@ -77,7 +77,7 @@ HttpResponsePtr HttpResponse::newHttpJsonResponse(const Json::Value &data)
     return res;
 }
 
-HttpResponsePtr HttpResponse::newHttpJsonResponse(Json::Value &&data)
+HttpResponsePtr HttpResponse::newHttpJsonResponse(yyjson::writer::value &&data)
 {
     auto res = std::make_shared<HttpResponseImpl>(k200OK, CT_APPLICATION_JSON);
     res->setJsonObject(std::move(data));
@@ -106,29 +106,30 @@ const char *HttpResponseImpl::versionString() const
 
 void HttpResponseImpl::generateBodyFromJson() const
 {
-    if (!jsonPtr_ || flagForSerializingJson_)
+    if (!jsonWriterPtr_ || flagForSerializingJson_)
     {
         return;
     }
     flagForSerializingJson_ = true;
-    static std::once_flag once;
-    static Json::StreamWriterBuilder builder;
-    std::call_once(once, []() {
-        builder["commentStyle"] = "None";
-        builder["indentation"] = "";
-        if (!app().isUnicodeEscapingUsedInJson())
-        {
-            builder["emitUTF8"] = true;
-        }
-        auto &precision = app().getFloatPrecisionInJson();
-        if (precision.first != 0)
-        {
-            builder["precision"] = precision.first;
-            builder["precisionType"] = precision.second;
-        }
-    });
-    bodyPtr_ = std::make_shared<HttpMessageStringBody>(
-        writeString(builder, *jsonPtr_));
+    // static std::once_flag once;
+    // static Json::StreamWriterBuilder builder;
+    // std::call_once(once, []() {
+    //     builder["commentStyle"] = "None";
+    //     builder["indentation"] = "";
+    //     if (!app().isUnicodeEscapingUsedInJson())
+    //     {
+    //         builder["emitUTF8"] = true;
+    //     }
+    //     auto &precision = app().getFloatPrecisionInJson();
+    //     if (precision.first != 0)
+    //     {
+    //         builder["precision"] = precision.first;
+    //         builder["precisionType"] = precision.second;
+    //     }
+    // });
+    // bodyPtr_ = std::make_shared<HttpMessageStringBody>(
+    //     writeString(builder, *jsonPtr_));
+    bodyPtr_ = std::make_shared<HttpMessageStringBody>(std::string(jsonWriterPtr_->write()));
 }
 
 HttpResponsePtr HttpResponse::newNotFoundResponse(const HttpRequestPtr &req)
@@ -889,7 +890,8 @@ void HttpResponseImpl::swap(HttpResponseImpl &that) noexcept
     swap(sendfileName_, that.sendfileName_);
     swap(streamCallback_, that.streamCallback_);
     swap(asyncStreamCallback_, that.asyncStreamCallback_);
-    jsonPtr_.swap(that.jsonPtr_);
+    jsonReaderPtr_.swap(that.jsonReaderPtr_);
+    jsonWriterPtr_.swap(that.jsonWriterPtr_);
     fullHeaderString_.swap(that.fullHeaderString_);
     httpString_.swap(that.httpString_);
     swap(datePos_, that.datePos_);
@@ -918,7 +920,8 @@ void HttpResponseImpl::clear()
     headers_.clear();
     cookies_.clear();
     bodyPtr_.reset();
-    jsonPtr_.reset();
+    jsonWriterPtr_.reset();
+    jsonReaderPtr_.reset();
     expriedTime_ = -1;
     datePos_ = std::string::npos;
     flagForParsingContentType_ = false;
@@ -927,37 +930,56 @@ void HttpResponseImpl::clear()
 
 void HttpResponseImpl::parseJson() const
 {
-    static std::once_flag once;
-    static Json::CharReaderBuilder builder;
-    std::call_once(once, []() {
-        builder["collectComments"] = false;
-        builder["stackLimit"] =
-            static_cast<Json::UInt>(drogon::app().getJsonParserStackLimit());
-    });
-    JSONCPP_STRING errs;
-    std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+    // static std::once_flag once;
+    // static Json::CharReaderBuilder builder;
+    // std::call_once(once, []() {
+    //     builder["collectComments"] = false;
+    //     builder["stackLimit"] =
+    //         static_cast<Json::UInt>(drogon::app().getJsonParserStackLimit());
+    // });
+    // JSONCPP_STRING errs;
+    // std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+    static thread_local yyjson::pool_allocator json_pool_alloc(10 * 1024);
     if (bodyPtr_)
     {
-        jsonPtr_ = std::make_shared<Json::Value>();
-        if (!reader->parse(bodyPtr_->data(),
-                           bodyPtr_->data() + bodyPtr_->length(),
-                           jsonPtr_.get(),
-                           &errs))
+        // jsonPtr_ = std::make_shared<Json::Value>();
+        // if (!reader->parse(bodyPtr_->data(),
+        //                    bodyPtr_->data() + bodyPtr_->length(),
+        //                    jsonPtr_.get(),
+        //                    &errs))
+        // {
+        //     LOG_ERROR << errs;
+        //     LOG_ERROR << "body: " << bodyPtr_->getString();
+        //     jsonPtr_.reset();
+        //     jsonParsingErrorPtr_ =
+        //         std::make_shared<std::string>(std::move(errs));
+        // }
+        // else
+        // {
+        //     jsonParsingErrorPtr_.reset();
+        // }
+        try 
         {
-            LOG_ERROR << errs;
+            if (json_pool_alloc.check_capacity(bodyPtr_->data()))
+            {
+                jsonReaderPtr_ = std::make_shared<yyjson::reader::value>(yyjson::read(bodyPtr_->data(), json_pool_alloc));
+            }
+            else
+            {
+                jsonReaderPtr_ = std::make_shared<yyjson::reader::value>(yyjson::read(bodyPtr_->data()));
+            }
+        } 
+        catch (std::exception& e) 
+        {
+            LOG_ERROR << e.what();
             LOG_ERROR << "body: " << bodyPtr_->getString();
-            jsonPtr_.reset();
-            jsonParsingErrorPtr_ =
-                std::make_shared<std::string>(std::move(errs));
-        }
-        else
-        {
-            jsonParsingErrorPtr_.reset();
+            jsonReaderPtr_.reset();
+            jsonParsingErrorPtr_ = std::make_shared<std::string>(std::move(e.what()));
         }
     }
     else
     {
-        jsonPtr_.reset();
+        jsonReaderPtr_.reset();
         jsonParsingErrorPtr_ =
             std::make_shared<std::string>("empty response body");
     }

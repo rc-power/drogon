@@ -21,7 +21,7 @@
 #include <drogon/Session.h>
 #include <drogon/Attribute.h>
 #include <drogon/UploadFile.h>
-#include <json/json.h>
+#include <cpp_yyjson.hpp>
 #include <trantor/net/InetAddress.h>
 #include <trantor/net/Certificate.h>
 #include <trantor/utils/Date.h>
@@ -63,18 +63,18 @@ HttpRequestPtr toRequest(T &&)
 }
 
 template <>
-HttpRequestPtr toRequest<const Json::Value &>(const Json::Value &pJson);
+HttpRequestPtr toRequest<const yyjson::value &>(const yyjson::value &pJson);
 template <>
-HttpRequestPtr toRequest(Json::Value &&pJson);
+HttpRequestPtr toRequest(yyjson::value &&pJson);
 
 template <>
-inline HttpRequestPtr toRequest<Json::Value &>(Json::Value &pJson)
+inline HttpRequestPtr toRequest<yyjson::value &>(yyjson::value &pJson)
 {
-    return toRequest((const Json::Value &)pJson);
+    return toRequest(pJson);
 }
 
 template <>
-std::shared_ptr<Json::Value> fromRequest(const HttpRequest &req);
+std::shared_ptr<yyjson::value> fromRequest(const HttpRequest &req);
 
 /// Abstract class for webapp developer to get or set the Http request;
 class DROGON_EXPORT HttpRequest
@@ -83,10 +83,10 @@ class DROGON_EXPORT HttpRequest
     /**
      * @brief This template enables implicit type conversion. For using this
      * template, user must specialize the fromRequest template. For example a
-     * shared_ptr<Json::Value> specialization version is available above, so
+     * shared_ptr<yyjson::reader::value> specialization version is available above, so
      * we can use the following code to get a json object:
      * @code
-       std::shared_ptr<Json::Value> jsonPtr = *requestPtr;
+       std::shared_ptr<yyjson::reader::value> jsonPtr = *requestPtr;
        @endcode
      * With this template, user can use their favorite JSON library instead of
      * the default jsoncpp library or convert the request to an object of any
@@ -385,10 +385,10 @@ class DROGON_EXPORT HttpRequest
      * The content type of the request must be 'application/json',
      * otherwise the method returns an empty shared_ptr object.
      */
-    virtual const std::shared_ptr<Json::Value> &jsonObject() const = 0;
+    virtual const std::shared_ptr<yyjson::reader::value> &jsonObject() const = 0;
 
     /// Get the Json object of the request
-    const std::shared_ptr<Json::Value> &getJsonObject() const
+    const std::shared_ptr<yyjson::reader::value> &getJsonObject() const
     {
         return jsonObject();
     }
@@ -474,7 +474,7 @@ class DROGON_EXPORT HttpRequest
     /// Version: Http1.1
     /// Content type: application/json, the @param data is serialized into the
     /// content of the request.
-    static HttpRequestPtr newHttpJsonRequest(const Json::Value &data);
+    static HttpRequestPtr newHttpJsonRequest(const yyjson::value &data);
 
     /// Create a http request with:
     /// Method: Post
@@ -516,19 +516,19 @@ class DROGON_EXPORT HttpRequest
 };
 
 template <>
-inline HttpRequestPtr toRequest<const Json::Value &>(const Json::Value &pJson)
+inline HttpRequestPtr toRequest<const yyjson::writer::value &>(const yyjson::writer::value &pJson)
 {
     return HttpRequest::newHttpJsonRequest(pJson);
 }
 
 template <>
-inline HttpRequestPtr toRequest(Json::Value &&pJson)
+inline HttpRequestPtr toRequest(yyjson::writer::value &&pJson)
 {
     return HttpRequest::newHttpJsonRequest(std::move(pJson));
 }
 
 template <>
-inline std::shared_ptr<Json::Value> fromRequest(const HttpRequest &req)
+inline std::shared_ptr<yyjson::reader::value> fromRequest(const HttpRequest &req)
 {
     return req.getJsonObject();
 }
