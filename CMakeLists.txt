@@ -692,6 +692,10 @@ install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT lib)
 
 install(FILES ${DROGON_HEADERS} DESTINATION ${INSTALL_INCLUDE_DIR}/drogon)
+install(FILES 
+        lib/inc/third_party/xxHash/xxh3.h
+        lib/inc/third_party/xxHash/xxhash.h 
+        DESTINATION ${INSTALL_INCLUDE_DIR}/third_party/xxHash)
 
 set(ORM_HEADERS
     orm_lib/inc/drogon/orm/ArrayParser.h

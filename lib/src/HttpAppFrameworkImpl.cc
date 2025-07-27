@@ -464,12 +464,16 @@ HttpAppFramework &HttpAppFrameworkImpl::setLogPath(
 #endif
     if (logPath.empty())
         return *this;
+
     // std::filesystem does not provide a method to check access permissions, so
     // keep existing code
     if (os_access(utils::toNativePath(logPath).c_str(), 0) != 0)
     {
-        std::cerr << "Log path does not exist!\n";
-        exit(1);
+        if (!std::filesystem::create_directories(logPath))
+        {
+            std::cerr << "Log path does not exist! And cannot create!\n";
+            exit(1);
+        }
     }
     if (os_access(utils::toNativePath(logPath).c_str(), R_OK | W_OK) != 0)
     {
@@ -1186,6 +1190,8 @@ HttpAppFramework &HttpAppFrameworkImpl::setupFileLogger()
                         // spdlog limitation
                         std::min(logfileMaxNum_, std::size_t(20000)),
                         false));
+                sinks.push_back(
+                    std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
             }
             else
                 sinks.push_back(
