@@ -692,6 +692,7 @@ install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT lib)
 
 install(FILES ${DROGON_HEADERS} DESTINATION ${INSTALL_INCLUDE_DIR}/drogon)
+install(FILES lib/src/HttpUtils.h DESTINATION ${INSTALL_INCLUDE_DIR}/drogon)
 install(FILES 
         lib/inc/third_party/xxHash/xxh3.h
         lib/inc/third_party/xxHash/xxhash.h 
