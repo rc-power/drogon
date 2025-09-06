@@ -238,8 +238,10 @@ if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD"
         LINK_LIBRARIES UUID_lib
         OUTPUT_VARIABLE OSSP_UUID_COMPILE_OUTPUT)
     if (normal_uuid)
+        message("Use normal_uuid")
         add_definitions(-DUSE_OSSP_UUID=0)
     elseif (ossp_uuid)
+        message("Use ossp_uuid")
         add_definitions(-DUSE_OSSP_UUID=1)
     else ()
         message(FATAL_ERROR "uuid lib error:\n${NORMAL_UUID_COMPILE_OUTPUT}\n${OSSP_UUID_COMPILE_OUTPUT}")
